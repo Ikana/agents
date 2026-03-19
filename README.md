@@ -122,7 +122,7 @@ The most significant modifications — adds Copilot review automation and remove
 
 1. **Add Copilot review steps** (new steps 2-3):
    - Request review via `gh copilot-review <pr-number>`
-   - Poll with exponential backoff (`120s → 240s → 300s`) checking `copilot-pull-request-reviewer` on latest HEAD
+   - Poll with exponential backoff (`120s → 240s → 300s`) checking `copilot-pull-request-reviewer[bot]` on latest HEAD
    - Fallback: retry once, then proceed without Copilot review
 
 2. **Add step 10: Close addressed review threads** — resolve threads via `gh api graphql` mutation after fixes are committed

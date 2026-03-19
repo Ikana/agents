@@ -11,6 +11,9 @@ Continuously iterate on the current branch until all CI checks pass and review f
 
 **Important**: All scripts must be run from the repository root directory (where `.git` is located).
 
+> **⚠️ GitHub Bot logins always include `[bot]`.**
+> When filtering API responses by `user.login`, use the full suffix: `copilot-pull-request-reviewer[bot]`, `dependabot[bot]`, `github-actions[bot]`, etc. Without `[bot]`, jq `select()` silently returns nothing.
+
 ## Bundled Scripts
 
 ### `scripts/fetch_pr_checks.py`
@@ -78,9 +81,9 @@ gh copilot-review <pr-number>
 Poll for the review with exponential backoff:
 
 1. Start at `120s`, back off exponentially (`120s → 240s → 300s`), cap at `300s`
-2. After each wait, check for a new review from `copilot-pull-request-reviewer` on the latest HEAD commit:
+2. After each wait, check for a new review from `copilot-pull-request-reviewer[bot]` on the latest HEAD commit:
    ```bash
-   gh api repos/{owner}/{repo}/pulls/{pr}/reviews --jq '[.[] | select(.user.login == "copilot-pull-request-reviewer")] | sort_by(.submitted_at) | last | .commit_id'
+   gh api repos/{owner}/{repo}/pulls/{pr}/reviews --jq '[.[] | select(.user.login == "copilot-pull-request-reviewer[bot]")] | sort_by(.submitted_at) | last | .commit_id'
    ```
 3. Compare against the current HEAD SHA (`git rev-parse HEAD`)
 4. Stop when a matching review appears

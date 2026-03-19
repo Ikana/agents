@@ -134,7 +134,7 @@ def check_copilot_review():
     """Patched iterate-pr must include Copilot review steps."""
     skill = (REPO_ROOT / "patches" / "iterate-pr-SKILL.md").read_text()
     assert "gh copilot-review" in skill, "Missing 'gh copilot-review' command"
-    assert "copilot-pull-request-reviewer" in skill, "Missing Copilot reviewer polling"
+    assert "copilot-pull-request-reviewer[bot]" in skill, "Missing Copilot reviewer polling"
 
 
 @check("iterate-pr-has-thread-resolution")
