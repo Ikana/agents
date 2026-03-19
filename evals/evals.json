@@ -1,0 +1,75 @@
+{
+  "skill_name": "agents",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I pushed my branch and the CI is failing. The GitHub Actions workflow `ci.yml` shows errors. Can you help me fix it?",
+      "expected_output": "Agent reads gh-fix-ci/SKILL.md, runs inspect_pr_checks.py to get structured failure data, summarizes failures, proposes a fix plan, and waits for approval before implementing.",
+      "files": [],
+      "expectations": [
+        "The agent references agents/gh-fix-ci/SKILL.md or follows its workflow",
+        "The agent attempts to run or references inspect_pr_checks.py with the correct path (agents/gh-fix-ci/scripts/)",
+        "The agent does NOT reference <path-to-skill> or ${CLAUDE_SKILL_ROOT} placeholders",
+        "The agent proposes a fix plan before implementing changes",
+        "The agent does NOT require sandbox_permissions or require_escalated"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "There are some review comments on my PR that I need to address. Can you help?",
+      "expected_output": "Agent reads gh-address-comments/SKILL.md, runs fetch_comments.py to get PR comments, numbers them with summaries, and asks which to address before making changes.",
+      "files": [],
+      "expectations": [
+        "The agent references agents/gh-address-comments/SKILL.md or follows its workflow",
+        "The agent attempts to run or references fetch_comments.py with the correct path (agents/gh-address-comments/scripts/)",
+        "The agent numbers the review threads and asks the user which to address",
+        "The agent does NOT auto-fix all comments without asking"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need you to iterate on my PR until CI is green and all review feedback is addressed.",
+      "expected_output": "Agent reads iterate-pr/SKILL.md, identifies the PR, requests Copilot review, polls for completion, gathers and categorizes feedback by LOGAF priority, auto-fixes high/medium, prompts for low, checks CI, and loops until everything passes.",
+      "files": [],
+      "expectations": [
+        "The agent references agents/iterate-pr/SKILL.md or follows its workflow",
+        "The agent runs or references fetch_pr_checks.py and fetch_pr_feedback.py with correct paths (agents/iterate-pr/scripts/)",
+        "The agent requests a Copilot review via gh copilot-review",
+        "The agent polls for the Copilot review to complete before proceeding",
+        "The agent categorizes feedback as high/medium/low following LOGAF scale",
+        "The agent auto-fixes high and medium items without prompting",
+        "The agent presents low-priority items as a numbered list for user selection",
+        "The agent does NOT use uv run or ${CLAUDE_SKILL_ROOT} in script paths",
+        "The agent does NOT reference reply_to_thread.py",
+        "The agent uses gh api graphql for replying to review threads"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Run the setup script to install PR automation agents into my project.",
+      "expected_output": "The setup script downloads upstream skills, applies modifications (path fixes, sandbox removal, Copilot additions), copies Claude commands and Copilot config files.",
+      "files": [],
+      "expectations": [
+        "The setup script downloads from ComposioHQ/awesome-codex-skills for gh-address-comments and gh-fix-ci",
+        "The setup script downloads from getsentry/skills for iterate-pr",
+        "The setup script patches SKILL.md files with portable paths",
+        "The setup script copies .claude/commands/ files",
+        "The setup script copies .github/copilot-reviews.yml and .github/copilot-instructions.md",
+        "The setup script does NOT overwrite existing files (skip-if-exists behavior)"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Verify that the copilot-instructions.md properly configures LOGAF tagging for the iterate-pr feedback categorization.",
+      "expected_output": "The copilot-instructions.md instructs Copilot to prefix all review comments with h:, m:, or l: tags matching the LOGAF patterns that fetch_pr_feedback.py parses.",
+      "files": [],
+      "expectations": [
+        "copilot-instructions.md defines h: tag for high priority (must address)",
+        "copilot-instructions.md defines m: tag for medium priority (should address)",
+        "copilot-instructions.md defines l: tag for low priority (optional/nit)",
+        "The tag format matches what fetch_pr_feedback.py parses (h:, m:, l: at start of comment)",
+        "copilot-instructions.md instructs that every review comment must start with a tag"
+      ]
+    }
+  ]
+}

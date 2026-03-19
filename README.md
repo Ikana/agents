@@ -167,6 +167,38 @@ your-project/
 └── ...
 ```
 
+## Evals
+
+The repo includes an eval suite that runs on every push and PR via GitHub Actions. Three jobs:
+
+### Structural & Content Evals (`evals/scripts/run_evals.py`)
+
+20 checks verifying internal consistency:
+- **Repo structure** — all required files exist
+- **Patch validation** — iterate-pr SKILL.md has no `uv run`, no `${CLAUDE_SKILL_ROOT}`, no `reply_to_thread.py`, includes Copilot review steps and thread resolution
+- **Command validation** — each `/command` references the correct SKILL.md
+- **Copilot config** — LOGAF tags in `copilot-instructions.md` match the patterns `fetch_pr_feedback.py` parses
+- **Setup script** — downloads from correct sources, copies Copilot config, skips existing files
+
+Run locally:
+```bash
+python evals/scripts/run_evals.py
+```
+
+### Setup Dry Run
+
+Runs `setup.sh --dry-run` in a fresh directory to verify the script doesn't error out.
+
+### Upstream Drift Detection
+
+Checks whether upstream repos have changed in ways that make our patches obsolete or redundant:
+- Did getsentry remove `uv run` or add `copilot-review` themselves?
+- Did ComposioHQ remove `sandbox_permissions`?
+
+Informational only — drift doesn't block the build, but flags when patches need review.
+
+The eval prompts in `evals/evals.json` follow the [Anthropic skill-creator](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md) schema and can be used with the skill-creator's eval runner for LLM-graded evaluation of agent behavior.
+
 ## Upstream Sources
 
 | Component | Repository | License |

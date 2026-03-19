@@ -1,0 +1,147 @@
+name: Evals
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  structural-evals:
+    name: Structural & Content Evals
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run eval suite
+        run: python evals/scripts/run_evals.py --verbose
+
+  setup-dry-run:
+    name: Setup Script (Dry Run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify setup.sh runs in dry-run mode
+        run: |
+          mkdir /tmp/test-project && cd /tmp/test-project
+          git init
+          bash $GITHUB_WORKSPACE/setup.sh --dry-run
+
+  upstream-drift:
+    name: Upstream Drift Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check upstream sources are reachable
+        run: |
+          set -e
+          echo "Checking upstream skill sources..."
+
+          # gh-address-comments
+          STATUS=$(curl -sL -o /dev/null -w "%{http_code}" \
+            "https://raw.githubusercontent.com/ComposioHQ/awesome-codex-skills/master/gh-address-comments/SKILL.md")
+          if [ "$STATUS" != "200" ]; then
+            echo "⚠ gh-address-comments upstream returned $STATUS"
+            exit 1
+          fi
+          echo "  ✓ gh-address-comments (ComposioHQ)"
+
+          # gh-fix-ci
+          STATUS=$(curl -sL -o /dev/null -w "%{http_code}" \
+            "https://raw.githubusercontent.com/ComposioHQ/awesome-codex-skills/master/gh-fix-ci/SKILL.md")
+          if [ "$STATUS" != "200" ]; then
+            echo "⚠ gh-fix-ci upstream returned $STATUS"
+            exit 1
+          fi
+          echo "  ✓ gh-fix-ci (ComposioHQ)"
+
+          # iterate-pr
+          STATUS=$(curl -sL -o /dev/null -w "%{http_code}" \
+            "https://raw.githubusercontent.com/getsentry/skills/main/plugins/sentry-skills/skills/iterate-pr/SKILL.md")
+          if [ "$STATUS" != "200" ]; then
+            echo "⚠ iterate-pr upstream returned $STATUS"
+            exit 1
+          fi
+          echo "  ✓ iterate-pr (getsentry)"
+
+          # iterate-pr scripts
+          for script in fetch_pr_checks.py fetch_pr_feedback.py; do
+            STATUS=$(curl -sL -o /dev/null -w "%{http_code}" \
+              "https://raw.githubusercontent.com/getsentry/skills/main/plugins/sentry-skills/skills/iterate-pr/scripts/$script")
+            if [ "$STATUS" != "200" ]; then
+              echo "⚠ iterate-pr/scripts/$script upstream returned $STATUS"
+              exit 1
+            fi
+          done
+          echo "  ✓ iterate-pr scripts"
+
+          echo ""
+          echo "All upstream sources reachable ✅"
+
+      - name: Detect upstream changes
+        run: |
+          set -e
+          echo "Checking for upstream changes that may need re-patching..."
+          DRIFT=0
+
+          # Download current upstream iterate-pr SKILL.md and check key markers
+          UPSTREAM=$(curl -sL "https://raw.githubusercontent.com/getsentry/skills/main/plugins/sentry-skills/skills/iterate-pr/SKILL.md")
+
+          # Check if upstream still uses uv run (our patch removes it)
+          if echo "$UPSTREAM" | grep -q "uv run"; then
+            echo "  · iterate-pr upstream still uses 'uv run' (expected — we patch this)"
+          else
+            echo "  ⚠ iterate-pr upstream no longer uses 'uv run' — patch may need update"
+            DRIFT=1
+          fi
+
+          # Check if upstream still uses CLAUDE_SKILL_ROOT (our patch removes it)
+          if echo "$UPSTREAM" | grep -q 'CLAUDE_SKILL_ROOT'; then
+            echo "  · iterate-pr upstream still uses CLAUDE_SKILL_ROOT (expected — we patch this)"
+          else
+            echo "  ⚠ iterate-pr upstream no longer uses CLAUDE_SKILL_ROOT — patch may need update"
+            DRIFT=1
+          fi
+
+          # Check if upstream added copilot-review (would mean our addition is redundant)
+          if echo "$UPSTREAM" | grep -q "copilot-review"; then
+            echo "  ⚠ iterate-pr upstream now includes copilot-review — review our patch for redundancy"
+            DRIFT=1
+          else
+            echo "  · iterate-pr upstream still lacks copilot-review (expected — we add this)"
+          fi
+
+          # Check if upstream added resolveReviewThread (would mean our addition is redundant)
+          if echo "$UPSTREAM" | grep -q "resolveReviewThread"; then
+            echo "  ⚠ iterate-pr upstream now includes resolveReviewThread — review our patch for redundancy"
+            DRIFT=1
+          else
+            echo "  · iterate-pr upstream still lacks resolveReviewThread (expected — we add this)"
+          fi
+
+          # Check gh-fix-ci for sandbox_permissions changes
+          GH_FIX_CI=$(curl -sL "https://raw.githubusercontent.com/ComposioHQ/awesome-codex-skills/master/gh-fix-ci/SKILL.md")
+          if echo "$GH_FIX_CI" | grep -q "sandbox_permissions"; then
+            echo "  · gh-fix-ci upstream still uses sandbox_permissions (expected — we remove this)"
+          else
+            echo "  ⚠ gh-fix-ci upstream no longer uses sandbox_permissions — patch may need update"
+            DRIFT=1
+          fi
+
+          echo ""
+          if [ $DRIFT -ne 0 ]; then
+            echo "⚠ Upstream drift detected — patches may need review"
+            echo "  This is informational only (not blocking)."
+          else
+            echo "No upstream drift detected ✅"
+          fi
