@@ -1,0 +1,4 @@
+reviews:
+  auto:
+    # Only trigger Copilot review after all CI checks pass
+    require_passing_checks: true

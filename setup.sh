@@ -184,6 +184,27 @@ done
 
 echo ""
 
+# ── Step 5: Copy Copilot review config ───────────────────────────
+echo "Installing Copilot review configuration..."
+
+run mkdir -p .github
+
+if [ ! -f ".github/copilot-reviews.yml" ]; then
+  run cp "$SCRIPT_DIR/.github/copilot-reviews.yml" ".github/copilot-reviews.yml"
+  info "copilot-reviews.yml installed (auto-review after CI passes)"
+else
+  skip ".github/copilot-reviews.yml"
+fi
+
+if [ ! -f ".github/copilot-instructions.md" ]; then
+  run cp "$SCRIPT_DIR/.github/copilot-instructions.md" ".github/copilot-instructions.md"
+  info "copilot-instructions.md installed (LOGAF priority tagging)"
+else
+  skip ".github/copilot-instructions.md"
+fi
+
+echo ""
+
 # ── Done ─────────────────────────────────────────────────────────
 echo "━━━━━━━━━━━━━━━"
 echo "✅ Done!"

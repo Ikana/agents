@@ -30,6 +30,15 @@ A structured workflow for going from idea → spec → plan → tasks → implem
 | `gh-fix-ci` | [ComposioHQ/awesome-codex-skills](https://github.com/ComposioHQ/awesome-codex-skills/tree/master/gh-fix-ci) | Debug and fix failing CI checks |
 | `iterate-pr` | [getsentry/skills](https://github.com/getsentry/skills/tree/main/plugins/sentry-skills/skills/iterate-pr) | Full feedback-fix-push cycle until CI is green |
 
+### 3. Copilot Review Configuration
+
+Two files in `.github/` make the `iterate-pr` workflow fully automated:
+
+- **`copilot-reviews.yml`** — enables automatic Copilot code review on PRs (triggers after CI passes)
+- **`copilot-instructions.md`** — tells Copilot to tag every review comment with [LOGAF priority markers](https://develop.sentry.dev/engineering-practices/code-review/#logaf-scale) (`h:`, `m:`, `l:`) so `fetch_pr_feedback.py` can categorize them automatically
+
+Without these files, `iterate-pr` still works but Copilot comments won't have priority tags — the script falls back to heuristic classification (keyword matching on "blocker", "nit", etc.).
+
 ## Quick Setup
 
 ### Prerequisites
@@ -68,6 +77,11 @@ git clone https://github.com/Ikana/agents.git /tmp/agents-bootstrap
 Or manually:
 
 ```bash
+# 0. Copy Copilot review config
+mkdir -p .github
+cp /tmp/agents-bootstrap/.github/copilot-reviews.yml .github/
+cp /tmp/agents-bootstrap/.github/copilot-instructions.md .github/
+
 # 1. Download upstream skills
 mkdir -p agents
 # gh-address-comments
@@ -135,14 +149,18 @@ The `.claude/commands/` files wire the agents to Claude Code slash commands:
 
 ```
 your-project/
-├── .specify/              # ← from spec-kit (specify init)
+├── .github/
+│   ├── copilot-reviews.yml       # ← auto-review config (from this repo)
+│   ├── copilot-instructions.md   # ← LOGAF tagging instructions (from this repo)
+│   └── workflows/                # ← your CI/CD workflows
+├── .specify/                     # ← from spec-kit (specify init)
 │   ├── templates/
 │   ├── scripts/bash/
 │   └── memory/
 ├── .claude/
-│   ├── commands/          # ← speckit.* from spec-kit, PR agents from this repo
-│   └── skills/            # ← speckit-* from spec-kit (with --ai-skills)
-├── agents/                # ← PR automation agents
+│   ├── commands/                 # ← speckit.* from spec-kit, PR agents from this repo
+│   └── skills/                   # ← speckit-* from spec-kit (with --ai-skills)
+├── agents/                       # ← PR automation agents
 │   ├── gh-address-comments/
 │   ├── gh-fix-ci/
 │   └── iterate-pr/
